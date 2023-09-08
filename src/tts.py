@@ -1,15 +1,11 @@
-from io import BytesIO
 import requests
-
-import time, asyncio
+import tempfile
+from time import sleep
 
 from config import UBERDUCK_KEY, UBERDUCK_SECRET
 
 
 def query_uberduck(text, voice="zwf"):
-    """
-    url = "https://api.uberduck.ai/speak"
-
     payload = {
         "voice": voice,
         "pace": 1,
@@ -20,23 +16,23 @@ def query_uberduck(text, voice="zwf"):
         "content-type": "application/json",
     }
 
-    start = time.time()
     response = requests.post(
-        url, json=payload, headers=headers, auth=(UBERDUCK_KEY, UBERDUCK_SECRET))
+        "https://api.uberduck.ai/speak", json=payload, headers=headers, auth=(UBERDUCK_KEY, UBERDUCK_SECRET))
 
-    while True:
-        if time.time() - start > 60:
-            raise Exception("Request timed out!")
-        
-        status_url = "https://api.uberduck.ai/speak-status"
-        if response.status_code != 200:
-            continue
+    audio_uuid = response.json()['uuid']
 
-        r = response.json()
-        if r['path']:
-            return BytesIO(r['path'].read())
-            """
-    pass
+    for t in range(10):
+        sleep(1)
+        output = requests.get(
+            "https://api.uberduck.ai/speak-status",
+            params=dict(uuid=audio_uuid),
+            auth=(UBERDUCK_KEY, UBERDUCK_SECRET),
+        ).json()
 
-
-query_uberduck("abcdefg")
+        if output["path"] != None:
+            print(output)
+            r = requests.get(output["path"], allow_redirects=True)
+            tf = tempfile.NamedTemporaryFile(suffix=".wav", mode="wb", delete=False)
+            tf.write(r.content)
+            tf.close()
+            return tf.name

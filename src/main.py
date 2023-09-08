@@ -1,11 +1,11 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord import FFmpegOpusAudio
 
 from datetime import datetime, timedelta
-import subprocess
-import tempfile
+from typing import Dict, Any
+
+import os
 
 from config import DISCORD_APP_TOKEN
 from tts import *
@@ -14,8 +14,7 @@ from GPT import GPT
 
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
-guild_to_voice_client = dict()
-GPT.init()
+guild_to_voice_client: Dict[discord.VoiceClient, Any] = dict()
 
 
 @bot.event
@@ -27,15 +26,15 @@ async def on_ready():
         print(f"Error syncing command(s):{e}")
 
 
-@bot.tree.command(name="prompt")
+@bot.tree.command(name="ask")
 @app_commands.describe(prompt="Speak to the AI")
-async def textpromt(ctx: discord.Interaction, prompt: str):
+async def text_promt(ctx: discord.Interaction, prompt: str):
     result = GPT.make_prompt(prompt)
     await ctx.response.send_message(f'{ctx.user.name}: "{prompt}"'+'\n'+f'**BOT cyno: "{result}"**')
 
 
 @bot.tree.command(name="join-channel")
-async def joinChannel(ctx: discord.Interaction):
+async def join_channel(ctx: discord.Interaction):
     voice_client, joined = await _get_or_create_voice_client(ctx)
     if voice_client is None:
         await display_msg(ctx, "Error", "User not in channel")
@@ -51,7 +50,7 @@ async def joinChannel(ctx: discord.Interaction):
         guild_to_voice_client[ctx.guild.id] = (voice_client, datetime.utcnow())
 
 
-@bot.tree.command(name="disconnect-channel")
+@bot.tree.command(name="kick-channel")
 async def kick_vc(ctx: discord.Interaction):
     if ctx.guild.id in guild_to_voice_client:
         voice_client, _ = guild_to_voice_client.pop(ctx.guild.id)
@@ -63,6 +62,12 @@ async def kick_vc(ctx: discord.Interaction):
         )
 
 
+@bot.tree.command(name="tts")
+@app_commands.describe(text="tts text")
+async def play_sound(ctx: discord.Interaction, text: str):
+    await ctx.response.send_message("playing tts message in vc")
+    await play_tts_in_vc(ctx, text)
+
 async def display_msg(ctx: discord.Interaction, title: str, msg: str):
     embed = discord.Embed(title=title,
                           description=msg)
@@ -73,7 +78,7 @@ def _context_to_voice_channel(ctx):
     return ctx.user.voice.channel if ctx.user.voice else None
 
 
-async def _get_or_create_voice_client(ctx):
+async def _get_or_create_voice_client(ctx) -> tuple[discord.VoiceClient, bool]:
     joined = False
     if ctx.guild.id in guild_to_voice_client:
         voice_client, last_used = guild_to_voice_client[ctx.guild.id]
@@ -87,7 +92,17 @@ async def _get_or_create_voice_client(ctx):
     return (voice_client, joined)
 
 
+async def play_tts_in_vc(ctx, text):
+    voice_client, _ = await _get_or_create_voice_client(ctx)
+
+    audio_src = query_uberduck(text)
+
+    audio = discord.FFmpegPCMAudio(source=audio_src)
+    voice_client.play(audio)
+
+
 def main():
+    GPT.init()
     bot.run(DISCORD_APP_TOKEN)
 
 

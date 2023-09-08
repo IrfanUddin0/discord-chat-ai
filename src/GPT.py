@@ -9,7 +9,7 @@ class GPT:
 
     @staticmethod
     def init():
-        GPT.model_name = "microsoft/DialoGPT-medium"
+        GPT.model_name = "microsoft/DialoGPT-large"
 
         GPT.tokenizer = AutoTokenizer.from_pretrained(GPT.model_name)
         GPT.model = AutoModelForCausalLM.from_pretrained(GPT.model_name)
@@ -22,8 +22,7 @@ class GPT:
             input_ids,
             max_length=1000,
             do_sample=True,
-            top_p=0.2,
-            top_k=50,
+            top_k=100,
             temperature=0.75,
             pad_token_id=GPT.tokenizer.eos_token_id,
         )
