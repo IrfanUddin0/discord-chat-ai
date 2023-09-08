@@ -1,6 +1,13 @@
 # discord-chat-ai
 Ai chatbot for discord
 
+current features:
+- use /ask to give a text promt and it will respond
+- use /tts to play tts message in currently connected vc
+
+# TODO:
+- voice recognition/tts response from ai
+
 # Setup
 - Create a file config.py in src/
 - get discord and uberduck api keys and put them in here like this:
